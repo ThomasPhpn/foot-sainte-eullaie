@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>⚽ Foot Loisir</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --bg:#0f2f1f; --bg2:#123a26; --card:#ffffff; --card-alt:#f3f6f4;
+    --accent:#2fae6a; --accent-dark:#1f8f54; --text:#1c2620; --muted:#6b776f;
+    --danger:#e05c5c; --ok:#2fae6a;
+    --font: 'Inter', sans-serif; --font-h:'Poppins', sans-serif;
+    padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+    box-sizing:border-box;
+  }
+  html{scroll-padding-top:env(safe-area-inset-top,0px);}
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:var(--font);background:linear-gradient(160deg,var(--bg),var(--bg2));min-height:100%;color:var(--text);}
+  header{position:sticky;top:env(safe-area-inset-top,0px);z-index:10;padding:18px 16px 10px;text-align:center;color:#fff;}
+  header h1{font-family:var(--font-h);margin:0;font-size:1.4rem;letter-spacing:.3px;}
+  .who{max-width:520px;margin:10px auto 0;padding:0 16px;}
+  select{width:100%;padding:12px 14px;border-radius:12px;border:none;font-size:1rem;font-family:var(--font);background:#fff;}
+  .tabs{display:flex;gap:8px;max-width:520px;margin:14px auto 0;padding:0 16px;}
+  .tab{flex:1;padding:10px;text-align:center;border-radius:999px;background:rgba(255,255,255,.12);color:#fff;font-weight:600;cursor:pointer;font-size:.92rem;}
+  .tab.active{background:#fff;color:var(--accent-dark);}
+  main{max-width:520px;margin:0 auto;padding:16px 16px 90px;}
+  .card{background:var(--card);border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 6px 18px rgba(0,0,0,.15);}
+  .card h3{margin:0 0 4px;font-family:var(--font-h);font-size:1.05rem;}
+  .card .meta{color:var(--muted);font-size:.85rem;margin-bottom:10px;}
+  .btnrow{display:flex;gap:8px;margin-bottom:10px;}
+  .btn{flex:1;padding:9px;border-radius:10px;border:2px solid #e2e6e3;background:var(--card-alt);font-weight:600;font-size:.88rem;cursor:pointer;color:var(--text);}
+  .btn.present.active{background:var(--ok);border-color:var(--ok);color:#fff;}
+  .btn.absent.active{background:var(--danger);border-color:var(--danger);color:#fff;}
+  .list{font-size:.82rem;color:var(--muted);line-height:1.5;}
+  .list b{color:var(--text);}
+  .empty{text-align:center;color:rgba(255,255,255,.75);padding:30px 10px;font-size:.95rem;}
+  .fab{position:fixed;right:18px;bottom:calc(18px + env(safe-area-inset-bottom,0px));width:48px;height:48px;border-radius:50%;background:#fff;border:none;font-size:1.3rem;box-shadow:0 6px 16px rgba(0,0,0,.3);cursor:pointer;}
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;padding:20px;z-index:50;}
+  .overlay.open{display:flex;}
+  .modal{background:#fff;border-radius:16px;padding:20px;width:100%;max-width:400px;}
+  .modal h3{font-family:var(--font-h);margin-top:0;}
+  .modal label{display:block;font-size:.85rem;color:var(--muted);margin:10px 0 4px;}
+  .modal input,.modal select{width:100%;padding:10px;border-radius:10px;border:1px solid #ddd;font-size:.95rem;font-family:var(--font);}
+  .modal-actions{display:flex;gap:8px;margin-top:16px;}
+  .modal-actions button{flex:1;padding:10px;border-radius:10px;border:none;font-weight:600;cursor:pointer;}
+  .btn-primary{background:var(--accent);color:#fff;}
+  .btn-secondary{background:#eee;color:var(--text);}
+  .chip{display:inline-block;background:var(--card-alt);border-radius:8px;padding:2px 8px;margin:2px 3px 0 0;font-size:.78rem;}
+  @media (prefers-color-scheme: light){ :root:not([data-theme="dark"]){} }
+</style>
+</head>
+<body>
+<header>
+  <h1>⚽ Foot Loisir</h1>
+  <div class="who"><select id="playerSelect"></select></div>
+  <div class="tabs">
+    <div class="tab active" data-tab="matchs">Matchs</div>
+    <div class="tab" data-tab="trainings">Entraînements</div>
+  </div>
+</header>
+<main id="content"></main>
+<button class="fab" id="adminBtn" title="Admin">⚙️</button>
+
+<div class="overlay" id="overlay">
+  <div class="modal" id="modalBody"></div>
+</div>
+
+<script>
+// ====== CONFIG À REMPLIR ======
+const SUPABASE_URL = "https://dwslnlldjbjhtjcyazag.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_uvHGLvtvs4cZ1-de63zksQ_ILCGlJOf";
+const ADMIN_CODE = "capitaine2026"; // change-le si tu veux
+// ================================
+
+const PLAYERS = ["Raphael","Flo","Gaspard","Alexandre C","Manu","Mathieu","Nasser","Franck","Kamel","Miguel","Abdel","Alexandre B","Thomas","Moises","Tarek","Sébastien","Dogan","Ben"];
+
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let currentTab = "matchs";
+let isAdmin = false;
+
+const sel = document.getElementById('playerSelect');
+sel.innerHTML = '<option value="">-- Choisis ton nom --</option>' + PLAYERS.map(p=>`<option value="${p}">${p}</option>`).join('');
+sel.value = localStorage.getItem('foot_player') || '';
+sel.onchange = ()=>{ localStorage.setItem('foot_player', sel.value); render(); };
+
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  t.classList.add('active'); currentTab = t.dataset.tab; render();
+});
+
+function closeModal(){ document.getElementById('overlay').classList.remove('open'); }
+document.getElementById('overlay').onclick = e=>{ if(e.target.id==='overlay') closeModal(); };
+
+document.getElementById('adminBtn').onclick = ()=>{
+  if(isAdmin){ openAddMenu(); return; }
+  const modal = document.getElementById('modalBody');
+  modal.innerHTML = `<h3>Code admin</h3><input id="codeInput" type="password" placeholder="Code"><div class="modal-actions">
+    <button class="btn-secondary" onclick="closeModal()">Annuler</button>
+    <button class="btn-primary" id="okCode">Valider</button></div>`;
+  document.getElementById('overlay').classList.add('open');
+  document.getElementById('okCode').onclick = ()=>{
+    if(document.getElementById('codeInput').value === ADMIN_CODE){ isAdmin = true; closeModal(); openAddMenu(); }
+    else alert("Code incorrect");
+  };
+};
+
+function openAddMenu(){
+  if(currentTab==='matchs') openAddMatch(); else openAddSlot();
+}
+
+function openAddMatch(){
+  const modal = document.getElementById('modalBody');
+  modal.innerHTML = `<h3>Ajouter un match</h3>
+    <label>Date</label><input id="mDate" type="date">
+    <label>Adversaire</label><input id="mOpp" type="text">
+    <label>Lieu</label><input id="mLoc" type="text">
+    <div class="modal-actions"><button class="btn-secondary" onclick="closeModal()">Annuler</button>
+    <button class="btn-primary" id="saveMatch">Ajouter</button></div>`;
+  document.getElementById('overlay').classList.add('open');
+  document.getElementById('saveMatch').onclick = async ()=>{
+    const d = document.getElementById('mDate').value;
+    if(!d) return alert("Date requise");
+    await sb.from('matches').insert({match_date:d, opponent:document.getElementById('mOpp').value, location:document.getElementById('mLoc').value});
+    closeModal(); render();
+  };
+}
+
+function openAddSlot(){
+  const modal = document.getElementById('modalBody');
+  modal.innerHTML = `<h3>Proposer un créneau</h3>
+    <label>Date</label><input id="sDate" type="date">
+    <label>Heure</label><input id="sTime" type="time">
+    <label>Libellé (optionnel)</label><input id="sLabel" type="text" placeholder="ex: Terrain synthétique">
+    <div class="modal-actions"><button class="btn-secondary" onclick="closeModal()">Annuler</button>
+    <button class="btn-primary" id="saveSlot">Ajouter</button></div>`;
+  document.getElementById('overlay').classList.add('open');
+  document.getElementById('saveSlot').onclick = async ()=>{
+    const d = document.getElementById('sDate').value;
+    if(!d) return alert("Date requise");
+    await sb.from('training_slots').insert({slot_date:d, slot_time:document.getElementById('sTime').value, label:document.getElementById('sLabel').value});
+    closeModal(); render();
+  };
+}
+
+async function purgeOldSlots(){
+  const today = new Date().toISOString().slice(0,10);
+  await sb.from('training_slots').delete().lt('slot_date', today);
+}
+
+async function render(){
+  const main = document.getElementById('content');
+  const me = sel.value;
+  if(currentTab === 'matchs'){
+    const {data: matches} = await sb.from('matches').select('*').order('match_date');
+    const {data: avail} = await sb.from('match_availability').select('*');
+    if(!matches || matches.length===0){ main.innerHTML = '<div class="empty">Aucun match programmé pour l\'instant.</div>'; return; }
+    main.innerHTML = matches.map(m=>{
+      const rows = (avail||[]).filter(a=>a.match_id===m.id);
+      const mine = rows.find(a=>a.player===me);
+      const present = rows.filter(a=>a.status==='present').map(a=>a.player);
+      const absent = rows.filter(a=>a.status==='absent').map(a=>a.player);
+      return `<div class="card">
+        <h3>${m.opponent || 'Match'} </h3>
+        <div class="meta">📅 ${fmtDate(m.match_date)}${m.location? ' · 📍 '+m.location:''}</div>
+        <div class="btnrow">
+          <button class="btn present ${mine&&mine.status==='present'?'active':''}" onclick="setAvail('${m.id}','present')">✅ Présent</button>
+          <button class="btn absent ${mine&&mine.status==='absent'?'active':''}" onclick="setAvail('${m.id}','absent')">❌ Absent</button>
+        </div>
+        <div class="list"><b>Présents (${present.length}) :</b> ${present.join(', ')||'—'}<br><b>Absents (${absent.length}) :</b> ${absent.join(', ')||'—'}</div>
+      </div>`;
+    }).join('');
+  } else {
+    await purgeOldSlots();
+    const today = new Date(); const limit = new Date(); limit.setDate(today.getDate()+14);
+    const {data: slots} = await sb.from('training_slots').select('*').order('slot_date');
+    const {data: votes} = await sb.from('training_votes').select('*');
+    const visible = (slots||[]).filter(s=> new Date(s.slot_date) <= limit);
+    if(visible.length===0){ main.innerHTML = '<div class="empty">Aucun créneau proposé pour les 2 prochaines semaines.</div>'; return; }
+    main.innerHTML = visible.map(s=>{
+      const v = (votes||[]).filter(x=>x.slot_id===s.id);
+      const iVoted = v.some(x=>x.player===me);
+      const names = v.map(x=>x.player);
+      return `<div class="card">
+        <h3>${fmtDate(s.slot_date)} ${s.slot_time?('· '+s.slot_time.slice(0,5)):''}</h3>
+        ${s.label?`<div class="meta">${s.label}</div>`:''}
+        <div class="btnrow"><button class="btn present ${iVoted?'active':''}" onclick="toggleVote('${s.id}', ${iVoted})">${iVoted?'✅ Je viens':'☐ Je suis dispo'}</button></div>
+        <div class="list"><b>${names.length} joueur(s) dispo :</b> ${names.join(', ')||'—'}</div>
+      </div>`;
+    }).join('');
+  }
+}
+
+function fmtDate(d){
+  const dt = new Date(d+'T00:00:00');
+  return dt.toLocaleDateString('fr-FR',{weekday:'short', day:'numeric', month:'short'});
+}
+
+async function setAvail(matchId, status){
+  const me = sel.value;
+  if(!me) return alert("Choisis ton nom en haut d'abord !");
+  await sb.from('match_availability').upsert({match_id:matchId, player:me, status});
+  render();
+}
+
+async function toggleVote(slotId, currentlyIn){
+  const me = sel.value;
+  if(!me) return alert("Choisis ton nom en haut d'abord !");
+  if(currentlyIn){ await sb.from('training_votes').delete().eq('slot_id', slotId).eq('player', me); }
+  else{ await sb.from('training_votes').insert({slot_id:slotId, player:me}); }
+  render();
+}
+
+render();
+</script>
+</body>
+</html>
