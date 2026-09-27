@@ -87,7 +87,7 @@ const ADMIN_CODE = "capitaine2026"; // change-le si tu veux
 
 const PLAYERS = ["Raphael","Flo","Gaspard","Alexandre C","Manu","Mathieu","Nasser","Franck","Kamel","Miguel","Abdel","Alexandre B","Thomas","Moises","Tarek","Sébastien","Dogan","Ben"];
 const DAYS = ["Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi","Dimanche"];
-const SLOTS = [{key:"18-20",label:"18h - 20h"},{key:"20-21",label:"20h - 21h"}];
+const SLOTS = [{key:"18-19",label:"18h - 19h"},{key:"19-20",label:"19h - 20h"},{key:"20-21",label:"20h - 21h"}];
 const VALID_THRESHOLD = 5;
 
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -175,7 +175,6 @@ async function purgeOldWeeks(){
 
 async function render(){
   const main = document.getElementById('content');
-  const me = sel.value;
   if(currentTab === 'matchs'){
     const {data: matches} = await sb.from('matches').select('*').order('match_date');
     const {data: avail} = await sb.from('match_availability').select('*');
