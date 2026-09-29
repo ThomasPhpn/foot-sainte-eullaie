@@ -85,9 +85,11 @@ const SUPABASE_ANON_KEY = "sb_publishable_uvHGLvtvs4cZ1-de63zksQ_ILCGlJOf";
 const ADMIN_CODE = "capitaine2026"; // change-le si tu veux
 // ================================
 
-const PLAYERS = ["Raphael","Flo","Gaspard","Alexandre C","Manu","Mathieu","Nasser","Franck","Kamel","Miguel","Abdel","Alexandre B","Thomas","Moises","Tarek","Sébastien","Dogan","Ben","Alexis"];
+const PLAYERS = ["Raphael","Flo","Gaspard","Alexandre C","Manu","Mathieu","Nasser","Franck","Kamel","Miguel","Abdel","Alexandre B","Thomas","Moises","Tarek","Sébastien","Dogan","Ben"];
 const DAYS = ["Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi","Dimanche"];
 const SLOTS = [{key:"18-19",label:"18h - 19h"},{key:"19-20",label:"19h - 20h"},{key:"20-21",label:"20h - 21h"}];
+const MORNING_SLOTS = [{key:"10-11",label:"10h - 11h"},{key:"11-12",label:"11h - 12h"}];
+function slotsForDay(dayIdx){ return (dayIdx===5||dayIdx===6) ? [...MORNING_SLOTS, ...SLOTS] : SLOTS; }
 const VALID_THRESHOLD = 5;
 
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -172,10 +174,14 @@ function openAddMatch(){
 async function purgeOldWeeks(){
   await sb.from('training_votes').delete().lt('week_id', WEEK_ID.this);
 }
+async function purgeOldMatches(){
+  await sb.from('matches').delete().lt('match_date', isoDate(new Date()));
+}
 
 async function render(){
   const main = document.getElementById('content');
   if(currentTab === 'matchs'){
+    await purgeOldMatches();
     const {data: matches} = await sb.from('matches').select('*').order('match_date');
     const {data: avail} = await sb.from('match_availability').select('*');
     if(!matches || matches.length===0){ main.innerHTML = '<div class="empty">Aucun match programmé pour l\'instant.</div>'; return; }
@@ -212,7 +218,7 @@ async function render(){
       if(matchDates.has(dayIso)){
         return `<div class="card"><h3>${day}</h3><div class="meta">⚽ Match ce jour-là — pas d'entraînement</div></div>`;
       }
-      const slotsHtml = SLOTS.map(s=>{
+      const slotsHtml = slotsForDay(dayIdx).map(s=>{
         const v = (votes||[]).filter(x=>x.day===dayIdx && x.slot===s.key);
         const names = v.map(x=>x.player);
         const iVoted = names.includes(me);
