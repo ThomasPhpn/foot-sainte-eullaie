@@ -212,9 +212,11 @@ async function render(){
       <div class="tab ${currentWeek==='next'?'active':''}" onclick="switchWeek('next')">Semaine prochaine</div>
     </div>
     <p style="color:rgba(255,255,255,.85);font-size:.85rem;text-align:center;margin:-6px 0 14px;">À partir de ${VALID_THRESHOLD} joueurs, le créneau est considéré comme validé ✅</p>`;
+    const todayIso = isoDate(new Date());
     const cards = DAYS.map((day, dayIdx)=>{
       const dayDate = new Date(weekMonday); dayDate.setDate(dayDate.getDate()+dayIdx);
       const dayIso = isoDate(dayDate);
+      if(dayIso < todayIso) return '';
       if(matchDates.has(dayIso)){
         return `<div class="card"><h3>${day}</h3><div class="meta">⚽ Match ce jour-là — pas d'entraînement</div></div>`;
       }
